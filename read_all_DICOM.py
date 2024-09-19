@@ -30,9 +30,7 @@ def extract_dicom_metadata(dicom_file):
     try:
         dicom_data = pydicom.dcmread(dicom_file)
         metadata = {
-            "File": dicom_file,
             "PatientID": dicom_data.get("PatientID", "N/A"),
-            "PatientName": dicom_data.get("PatientName", "N/A"),
             "PatientAge": dicom_data.get("PatientAge", "N/A"),
             "PatientSex": dicom_data.get("PatientSex", "N/A"),
             "StudyDate": dicom_data.get("StudyDate", "N/A"),
@@ -41,7 +39,8 @@ def extract_dicom_metadata(dicom_file):
             "ViewPosition": dicom_data.get("ViewPosition", "N/A"),
             "Manufacturer": dicom_data.get("Manufacturer", "N/A"),
             "Rows": dicom_data.get("Rows", "N/A"),
-            "Columns": dicom_data.get("Columns", "N/A")
+            "Columns": dicom_data.get("Columns", "N/A"),
+            "File": dicom_file
         }
         return metadata
     except Exception as e:
@@ -84,8 +83,8 @@ def process_dicom_files_and_save_csv(root_directory, output_csv):
     print(f"Metadata extracted and saved to {output_csv}")
 
 # Set the root directory and output CSV file
-root_directory = r"\\205.233.161.11\ai-primary3\AIRM\BCWomen\BDenStorage\Diagnostic\20130116\20190906_7cpdmf\20130116_MG Diagnostic RT"  # Example: "/path/to/dicom/files"
-output_csv = "dicom_metadata.csv"
+root_directory = r"\\205.233.161.11\ai-primary3\AIRM\BCWomen\BDenStorage\Screening"  # Example: "/path/to/dicom/files"
+output_csv = "bcwomen_dicom_metadata.csv"
 
 # Run the script to process DICOM files and save metadata to CSV
 process_dicom_files_and_save_csv(root_directory, output_csv)

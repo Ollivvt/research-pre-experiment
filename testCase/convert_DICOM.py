@@ -20,12 +20,15 @@ dicom_info = {
     "Columns": dicom_data.get("Columns", "N/A")
 }
 
-# Extract the pixel array
-img_array = dicom_data.pixel_array
-
 # Print the extracted information
 for key, value in dicom_info.items():
     print(f"{key}: {value}")
+
+'''
+Matplotlib - shows the image
+'''
+# Extract the pixel array
+img_array = dicom_data.pixel_array
 
 # Display the image
 plt.imshow(img_array, cmap='gray')
