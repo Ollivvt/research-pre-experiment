@@ -25,7 +25,7 @@ def clean_column(df, column):
     return df
 
 df2 = clean_column(df2, 'BDProjectID')
-df2['StudyDate'] = pd.to_datetime(df2['StudyDate'])
+df2 = clean_column(df2, 'StudyDate')
 df2['AccessionNum'] = df2['AccessionNum'].fillna('')  # Handle missing AccessionNumbers
 
 # Initialize result lists
@@ -63,7 +63,9 @@ for sheet_name, df1 in df1.items():
                 if similar_accession and similar_accession[1] > 80:  # Adjust threshold for similarity
                     similar_match = df2[df2['AccessionNum'] == similar_accession[0]]
                     if not similar_match.empty:
-                        similar_studies.append((row1['patient_id'], row1['StudyDate'], row1['AccessionNumber'], similar_accession[0], sheet_name))
+                        # Record the similarity detail: AccessionNumber similarity
+                        similar_studies.append((row1['patient_id'], row1['StudyDate'], row1['AccessionNumber'], 
+                                                similar_accession[0], 'AccessionNumber Similarity', sheet_name))
                         continue
 
             # If no similar match, add to mismatched list
