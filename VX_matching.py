@@ -5,7 +5,7 @@ import io
 
 
 # Load the Excel files
-file1 = 'X:/Data/YuTing/Project/Tabular/ViewCatalog/BCWomen_ViewCount_2023-11-04.xlsx'
+file1 = 'X:/Data/YuTing/Project/Tabular/ViewCatalog/testcases.xlsx'
 file2 = 'X:/Data/YuTing/Project/Tabular/XWalk/XW_Kheiron13Feb2024.xlsx'
 password = 'BDenCrossWalk'
 
@@ -24,8 +24,12 @@ def clean_column(df, column):
     df[column] = df[column].astype(str).str.strip().str.lower().replace('nan', None)
     return df
 
+# Handle StudyDate as a string or integer for comparison
+def studydate_as_numeric(df, date_column):
+    df[date_column] = df[date_column].astype(str).str.strip()  # Keep the numeric string format
+
 df2 = clean_column(df2, 'BDProjectID')
-df2 = clean_column(df2, 'StudyDate')
+studydate_as_numeric(df2, 'StudyDate')
 df2['AccessionNum'] = df2['AccessionNum'].fillna('')  # Handle missing AccessionNumbers
 
 # Initialize result lists
@@ -39,46 +43,67 @@ for sheet_name, df1 in df1.items():
     
     # Clean and standardize the columns in df1
     df1 = clean_column(df1, 'patient_id')
-    df1['StudyDate'] = pd.to_datetime(df1['StudyDate'])
+    studydate_as_numeric(df1, 'StudyDate')
     df1['AccessionNumber'] = df1['AccessionNumber'].fillna('')  # Handle missing AccessionNumbers
     
     # Matching process
     for index1, row1 in df1.iterrows():
-        # Exact matching by patient_id, StudyDate, and AccessionNumber
-        if row1['AccessionNumber']:  # If AccessionNumber is available
+        # First, try to match by patient_id, StudyDate (in numeric form), and AccessionNumber (if available)
+        if row1['AccessionNumber']:
             match = df2[(df2['BDProjectID'] == row1['patient_id']) & 
                         (df2['StudyDate'] == row1['StudyDate']) & 
                         (df2['AccessionNum'] == row1['AccessionNumber'])]
-        else:  # If AccessionNumber is missing, match by patient_id and StudyDate only
+        else:
+            # If AccessionNumber is not available, only match on patient_id and StudyDate (in numeric form)
             match = df2[(df2['BDProjectID'] == row1['patient_id']) & 
                         (df2['StudyDate'] == row1['StudyDate'])]
-        
-        # If exact match is found
+
+        # If exact match is found, include only one AccessionNumber
         if not match.empty:
-            matched_list.append((row1['patient_id'], row1['StudyDate'], row1['AccessionNumber'], match.iloc[0]['AccessionNum'], sheet_name))
+            matched_list.append((row1['patient_id'], row1['StudyDate'], row1['AccessionNumber'], sheet_name))
         else:
-            # If no exact match, try to find similar studies using fuzzy matching on AccessionNumber
+            # Separate checks for mismatches on patient_id and AccessionNumber (StudyDate is only secondary)
+            accession_mismatch = False
+            patientid_mismatch = False
+
+            # Check for patient_id mismatch (based on StudyDate match in numeric form)
+            match_without_patientid = df2[(df2['StudyDate'] == row1['StudyDate']) & (df2['AccessionNum'] == row1['AccessionNumber'])]
+            if not match_without_patientid.empty:
+                if match_without_patientid['BDProjectID'].iloc[0] != row1['patient_id']:
+                    patientid_mismatch = True
+
+            # Check for AccessionNumber mismatch if AccessionNumber exists
             if row1['AccessionNumber']:
-                similar_accession = process.extractOne(row1['AccessionNumber'], df2['AccessionNum'], scorer=fuzz.token_sort_ratio)
-                if similar_accession and similar_accession[1] > 80:  # Adjust threshold for similarity
-                    similar_match = df2[df2['AccessionNum'] == similar_accession[0]]
-                    if not similar_match.empty:
-                        # Record the similarity detail: AccessionNumber similarity
-                        similar_studies.append((row1['patient_id'], row1['StudyDate'], row1['AccessionNumber'], 
-                                                similar_accession[0], 'AccessionNumber Similarity', sheet_name))
-                        continue
+                match_without_accession = df2[(df2['BDProjectID'] == row1['patient_id']) & (df2['StudyDate'] == row1['StudyDate'])]
+                if not match_without_accession.empty:
+                    if match_without_accession['AccessionNum'].iloc[0] != row1['AccessionNumber']:
+                        accession_mismatch = True
 
-            # If no similar match, add to mismatched list
-            mismatched_list.append((row1['patient_id'], row1['StudyDate'], row1['AccessionNumber'], sheet_name))
+            # Record the mismatch type if there is no fuzzy match
+            if not patientid_mismatch and not accession_mismatch:
+                mismatched_list.append(('', row1['patient_id'], row1['StudyDate'], row1['AccessionNumber'], '', '', '', sheet_name))
+            else:
+                # If any mismatch exists, record it in a more detailed manner
+                if accession_mismatch and not match_without_accession.empty:
+                    mismatched_list.append(('AccessionNumber Mismatch', 
+                                            row1['patient_id'], match_without_accession['BDProjectID'].iloc[0],
+                                            row1['StudyDate'], match_without_accession['StudyDate'].iloc[0],
+                                            row1['AccessionNumber'], match_without_accession['AccessionNum'].iloc[0], sheet_name))
+                if patientid_mismatch and not match_without_patientid.empty:
+                    mismatched_list.append(('PatientID Mismatch', 
+                                            row1['patient_id'], match_without_patientid['BDProjectID'].iloc[0],
+                                            row1['StudyDate'], match_without_patientid['StudyDate'].iloc[0],
+                                            row1['AccessionNumber'], match_without_patientid['AccessionNum'].iloc[0], sheet_name))
 
-# Convert the result lists to DataFrames
-matched_df = pd.DataFrame(matched_list, columns=['patient_id', 'StudyDate', 'AccessionNumber_file1', 'AccessionNum_file2', 'Sheet'])
-mismatched_df = pd.DataFrame(mismatched_list, columns=['patient_id', 'StudyDate', 'AccessionNumber', 'Sheet'])
-similar_studies_df = pd.DataFrame(similar_studies, columns=['patient_id', 'StudyDate', 'AccessionNumber_file1', 'Similar_AccessionNum_file2', 'Sheet'])
+# Convert the result lists to DataFrames			
+matched_df = pd.DataFrame(matched_list, columns=['patient_id', 'StudyDate', 'AccessionNumber', 'Sheet'])			
+mismatched_df = pd.DataFrame(mismatched_list, columns=['Mismatch_Reason',			
+                                                       'patient_id_file1', 'patient_id_file2', 'StudyDate_file1', 'StudyDate_file2',			
+                                                       'AccessionNumber_file1', 'AccessionNumber_file2', 'Sheet'])			
+
 
 # Save results to Excel
 matched_df.to_excel('matched_list.xlsx', index=False)
 mismatched_df.to_excel('mismatched_list.xlsx', index=False)
-similar_studies_df.to_excel('similar_studies.xlsx', index=False)
 
 print("Results saved to Excel files.")
