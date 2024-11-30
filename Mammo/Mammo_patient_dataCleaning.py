@@ -63,7 +63,7 @@ def clean_patient_data(input_file, selected_columns):
     return matched_records, ethnicity_missing_records
 
 def main():
-    # Input file path (replace with your actual file path)
+    # Input file path
     input_file = r'U:\GitHub\research-pre-experiment\Mammo\Screening Registry.csv'
     
     # Specify the columns you want to save
