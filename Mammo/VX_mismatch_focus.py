@@ -1,7 +1,7 @@
 import pandas as pd
 
 # Load the mismatched Excel file
-input_file = r'U:\GitHub\research-pre-experiment\Mammo\outputs\ViewCatalog vs XWalk\BCWomen_mismatched_list.xlsx'
+input_file = r'U:\GitHub\research-pre-experiment\Mammo\outputs\ViewCatalog vs XWalk\Original Mismatched List\NLMMobile_mismatched_list.xlsx'
 df = pd.read_excel(input_file)
 
 # Clean Accession Numbers by removing 'MG' for comparison
@@ -28,8 +28,8 @@ matched_patient_ids = set(matched_output['patient_id'])
 remaining_mismatches = df[~df['patient_id_file1'].isin(matched_patient_ids)].copy()
 
 # Save outputs to Excel
-matched_output_file = "BCWomen_matched_2pid.xlsx"
-remaining_mismatches_file = "BCWomen_still_mismatched_list.xlsx"
+matched_output_file = "NLMMobile_matched_2pid.xlsx"
+remaining_mismatches_file = "NLMMobile_still_mismatched_list.xlsx"
 
 matched_output.to_excel(matched_output_file, index=False)
 remaining_mismatches.to_excel(remaining_mismatches_file, index=False)
