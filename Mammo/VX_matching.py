@@ -3,10 +3,9 @@ from fuzzywuzzy import fuzz, process
 import msoffcrypto
 import io
 
-
 # Load the Excel files
-file1 = 'X:/Data/YuTing/Project/Tabular/ViewCatalog/XRay505_ViewCount_2023-11-03.xlsx'
-file2 = 'X:/Data/YuTing/Project/Tabular/XWalk/XW_Kheiron13Feb2024.xlsx'
+file1 = 'D:/Data/YuTing/Project/Tabular/ViewCatalog/Burnaby_ViewCount_2023-11-03.xlsx'
+file2 = 'D:/Data/YuTing/Project/Tabular/XWalk/XW_Kheiron13Feb2024.xlsx'
 password = 'BDenCrossWalk'
 
 # Open and decrypt the password-protected file
@@ -24,13 +23,20 @@ def clean_column(df, column):
     df[column] = df[column].astype(str).str.strip().str.lower().replace('nan', None)
     return df
 
-# Handle StudyDate as a string or integer for comparison
+# Handle StudyDate as a string for comparison
 def studydate_as_numeric(df, date_column):
-    df[date_column] = df[date_column].astype(str).str.strip()  # Keep the numeric string format
+    df[date_column] = df[date_column].astype(str).str.strip()  # Keep as numeric string format
 
+# Check for invalid AccessionNumber
+def validate_accession_number(accession):
+    if '-' in str(accession):
+        return None  # Treat as missing
+    return str(accession)
+
+# Apply cleaning and validation
 df2 = clean_column(df2, 'BDProjectID')
 studydate_as_numeric(df2, 'StudyDate')
-df2['AccessionNum'] = df2['AccessionNum']
+df2['AccessionNum'] = df2['AccessionNum'].apply(validate_accession_number)
 df2['InstitutionName'] = df2['InstitutionName']
 
 # Initialize result lists
@@ -59,7 +65,10 @@ for sheet_name, df1 in df1.items():
             # If AccessionNumber is not available, only match on patient_id and StudyDate (in numeric form)
             match = df2[(df2['BDProjectID'] == row1['patient_id']) & 
                         (df2['StudyDate'] == row1['StudyDate'])]
-
+        '''
+        match = df2[(df2['BDProjectID'] == row1['patient_id']) & 
+                        (df2['StudyDate'] == row1['StudyDate'])]
+        '''
         # If exact match is found, include only one AccessionNumber
         if not match.empty:
             matched_list.append((row1['patient_id'], row1['StudyDate'], row1['AccessionNumber'], sheet_name))
@@ -111,7 +120,7 @@ mismatched_df = pd.DataFrame(mismatched_list, columns=['Mismatch_Reason',
 
 
 # Save results to Excel
-matched_df.to_excel('XRay505_matched_list.xlsx', index=False)
-mismatched_df.to_excel('XRay505_mismatched_list.xlsx', index=False)
+matched_df.to_excel('Burnaby_matched_list.xlsx', index=False)
+mismatched_df.to_excel('Burnaby_mismatched_list.xlsx', index=False)
 
 print("Results saved to Excel files.")
